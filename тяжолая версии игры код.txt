@@ -1,0 +1,131 @@
+import React, { useEffect, useRef, useState } from "react";
+
+export default function SurfRunnerGame() {
+  const canvasRef = useRef(null);
+  const [score, setScore] = useState(0);
+  const [running, setRunning] = useState(false);
+
+  const player = useRef({ x: 80, y: 150, size: 25 });
+  const obstacles = useRef([]);
+  const keys = useRef({});
+
+  useEffect(() => {
+    const handleKeyDown = (e) => (keys.current[e.key] = true);
+    const handleKeyUp = (e) => (keys.current[e.key] = false);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!running) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    let animationFrame;
+    let lastSpawn = 0;
+
+    const gameLoop = (time) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // movement
+      if (keys.current.ArrowUp && player.current.y > 20)
+        player.current.y -= 5;
+      if (keys.current.ArrowDown && player.current.y < 280)
+        player.current.y += 5;
+
+      // spawn obstacles
+      if (time - lastSpawn > 1200) {
+        obstacles.current.push({
+          x: 500,
+          y: Math.random() * 260 + 20,
+          size: 20,
+        });
+        lastSpawn = time;
+      }
+
+      // draw player
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(
+        player.current.x,
+        player.current.y,
+        player.current.size,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      // draw obstacles
+      ctx.fillStyle = "red";
+      obstacles.current.forEach((obs, index) => {
+        obs.x -= 4;
+
+        ctx.fillRect(obs.x, obs.y, obs.size, obs.size);
+
+        // collision
+        const dx = player.current.x - obs.x;
+        const dy = player.current.y - obs.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < player.current.size) {
+          setRunning(false);
+          alert("Game Over! Score: " + score);
+        }
+
+        // remove offscreen
+        if (obs.x < -20) {
+          obstacles.current.splice(index, 1);
+          setScore((s) => s + 1);
+        }
+      });
+
+      animationFrame = requestAnimationFrame(gameLoop);
+    };
+
+    animationFrame = requestAnimationFrame(gameLoop);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [running, score]);
+
+  const startGame = () => {
+    player.current.y = 150;
+    obstacles.current = [];
+    setScore(0);
+    setRunning(true);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <h1 className="text-2xl font-bold">Surf Runner Mini Game</h1>
+
+      <canvas
+        ref={canvasRef}
+        width={500}
+        height={300}
+        className="border rounded-2xl shadow"
+      />
+
+      <div className="text-lg">Score: {score}</div>
+
+      {!running && (
+        <button
+          onClick={startGame}
+          className="px-6 py-2 rounded-2xl bg-blue-500 text-white"
+        >
+          Start Game
+        </button>
+      )}
+
+      <p className="text-sm text-gray-500">
+        Controls: Arrow Up / Arrow Down
+      </p>
+    </div>
+  );
+}
