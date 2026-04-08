@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Surf Runner Game</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='70'%3E🏄‍♂️%3C/text%3E%3C/svg%3E">
+<style>
+  body {
+    margin: 0;
+    background: #87ceeb;
+    font-family: Arial;
+    text-align: center;
+  }
+  canvas {
+    background: #1e90ff;
+    display: block;
+    margin: 20px auto;
+    border-radius: 12px;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    background: #0078d7;
+    color: white;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Surf Runner</h1>
+<button onclick="startGame()">Start Game</button>
+<p>Score: <span id="score">0</span></p>
+
+<canvas id="gameCanvas" width="1600" height="900"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let player;
+let obstacles;
+let score;
+let running = false;
+
+let playerColor = "#f5deb3";
+
+const keys = {};
+
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// UI color selector
+const colorPicker = document.createElement("input");
+colorPicker.type = "color";
+colorPicker.value = playerColor;
+colorPicker.style.position = "absolute";
+colorPicker.style.top = "10px";
+colorPicker.style.right = "10px";
+document.body.appendChild(colorPicker);
+
+colorPicker.addEventListener("input", () => {
+  playerColor = colorPicker.value;
+});
+
+function startGame() {
+  player = { x: 200, y: 450 };
+  obstacles = [];
+  score = 0;
+  running = true;
+  loop();
+}
+
+function randomColor() {
+  const colors = ["red","yellow","lime","orange","purple","cyan","pink"];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+function spawnObstacle() {
+  obstacles.push({
+    x: 1600,
+    y: Math.random() * 1000 + 40,
+    size: Math.random() * 40 + 20,
+    speed: Math.random() * 4 + 3,
+    color: randomColor()
+  });
+}
+
+setInterval(() => {
+  if (running) {
+    for(let i=0;i<3;i++) spawnObstacle();
+  }
+}, 900);
+
+function loop() {
+  if (!running) return;
+
+  ctx.clearRect(0,0,1600,900);
+
+  // keep player fully inside screen (no disappearing at top/bottom)
+  if (keys["ArrowUp"] && player.y > 20) player.y -= 8;
+  if (keys["ArrowDown"] && player.y < 880) player.y += 8;
+
+  // draw surfboard
+  ctx.fillStyle = playerColor;
+  ctx.beginPath();
+  ctx.ellipse(player.x, player.y, 50, 15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  obstacles.forEach((o, i) => {
+    o.x -= o.speed;
+
+    ctx.fillStyle = o.color;
+    ctx.fillRect(o.x, o.y, o.size, o.size);
+
+    let dx = player.x - o.x;
+    let dy = player.y - o.y;
+
+    if (Math.sqrt(dx*dx + dy*dy) < 40) {
+      running = false;
+      alert("Game Over! Score: " + score);
+      return;
+    }
+
+    if (o.x < 0) {
+      obstacles.splice(i,1);
+      score++;
+      document.getElementById("score").textContent = score;
+    }
+  });
+
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
